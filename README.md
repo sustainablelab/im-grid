@@ -4,7 +4,7 @@ drawing API (as opposed to calling directly to OpenGL).
 ## Contents
 
 - If you cloned this repo just to use the Windows `.exe`:
-    - [grid user manual](README.md#[grid-user-manual)
+    - [grid user manual](README.md#grid-user-manual)
 - If you cloned this repo to modify the source code:
     - [Build this project](README.md#build-this-project)
 - If you want to do something like this from scratch:
@@ -15,6 +15,20 @@ drawing API (as opposed to calling directly to OpenGL).
 
 TODO: Write this section when there's a grid application that
 does good grid stuff.
+
+Right now, the `.exe` does this:
+
+- goes fullscreen
+- draws a bunch of blue circles that interact with the mouse
+
+![screenshot](doc/img/screenshot-2021-12-31.png)
+
+- `F1`
+    - toggle debug overlay on/off
+- `Space`
+    - toggle circles on/off
+- `Esc`
+    - quit the application
 
 # Build this project
 
