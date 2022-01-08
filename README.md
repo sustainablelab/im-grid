@@ -410,6 +410,16 @@ int main(int, char**)
 *Yes, including SDL.h does not seem minimalistic, but this is
 necessary to get the main() entry point.*
 
+On the same topic of the `main()` entry point, `main` must take
+the two arguments -- a number and a string! Otherwise you get
+the "undefined reference to `SDL_main`" linker error:
+
+    || blah/../x86_64-w64-mingw32/bin/ld.exe:
+    || C:/msys64/mingw64/lib/libSDL2main.a(SDL_windows_main.c.obj):(.text+0xf6):
+    || undefined reference to `SDL_main'
+
+Gory detail is in [the appendix here](README.md#linker-error-undefined-reference-to-main).
+
 Now build it:
 
 ```bash
@@ -988,3 +998,135 @@ If you're wondering why the package is called GLEW and not GL3 or
 something like that it's because OpenGL is a specification, not
 an implementation. GLEW is a library that connects the OpenGL
 functions to actual implementations.
+
+## linker error undefined reference to main
+
+`main` must take the two arguments -- a number and a string!
+
+Some people do this:
+
+```c
+int main(int argc, char *argv[])
+{
+    return 0;
+}
+```
+
+Some people do this:
+
+```c
+int main(int, char**)
+{
+    return 0;
+}
+```
+
+It doesn't matter. But this will not work with SDL:
+
+```c
+int main(void)
+{
+    return 0;
+}
+```
+
+The `int main(void)` version causes the "undefined reference to
+`SDL_main`" linker error:
+
+    || blah/../x86_64-w64-mingw32/bin/ld.exe:
+    || C:/msys64/mingw64/lib/libSDL2main.a(SDL_windows_main.c.obj):(.text+0xf6):
+    || undefined reference to `SDL_main'
+
+This means your `main()` doesn't match the function signature
+required by SDL for its `SDL_main()`.
+
+To understand what's going on, run the `print-libs` recipe to get
+the path to the `SDL` includes on your system.
+
+```bash
+make print-libs
+```
+
+What does this do? It prints the path to every included file in
+`main.cpp`.
+
+How does it do that? Here is the recipe:
+
+```make
+.PHONY: print-libs
+print-libs: main.cpp
+	$(CXX) $(CXXFLAGS) $< -M > libs.txt
+```
+
+What does that recipe do? If I ignore all the compiler flags that
+are irrelevant to the mystery of the `SDL_main` undefined
+reference, this `print-libs` recipe simply turns into this:
+
+```bash
+g++ `pkg-config --cflags sdl2` main.cpp -M > libs.txt
+```
+
+Now I look in `libs.txt`. I see a bunch of paths that start like
+this:
+
+    C:/msys64/mingw64/include/SDL2/
+
+Go to that folder and look for `SDL_main.h`.
+
+Better yet, I include that path in my Vim `path` variable by
+editing my `.vimrc` like this:
+
+```vim
+let &path = &path . ',' . '/mingw64/include/SDL2/'
+```
+
+*Note the `C:/msys64` is omitted.*
+
+Then in Vim I put my cursor on the `SDL.h` in `#include <SDL.h>`
+hit `gf` and Vim jumps me to `SDL.h`.
+
+From there I start searching for `main` and I immediately find
+`#include "SDL_main.h"`. Again `gf` to open `SDL_main.h`.
+
+Now I search for `WinMain` (because that's what it's called on
+Windows), and I see this:
+
+```c
+#ifndef SDL_MAIN_HANDLED
+#if defined(__WIN32__)
+/* On Windows SDL provides WinMain(), which parses the command line and passes
+   the arguments to your main function.
+   If you provide your own WinMain(), you may define SDL_MAIN_HANDLED
+ */
+#define SDL_MAIN_AVAILABLE
+```
+
+So I search for `SDL_MAIN_AVAILABLE` and I find this:
+
+```c
+#if defined(SDL_MAIN_NEEDED) || defined(SDL_MAIN_AVAILABLE)
+#define main    SDL_main
+#endif
+```
+
+Yay, getting close. I search for `SDL_main` again and I find the
+answer to the mysterious linker error:
+
+```c
+/**
+ *  The prototype for the application's main() function
+ */
+typedef int (*SDL_main_func)(int argc, char *argv[]);
+extern SDLMAIN_DECLSPEC int SDL_main(int argc, char *argv[]);
+```
+
+It's the prototype for the application's `main()` function. My
+`main()` has to match this prototype. The prototype takes a
+number and a string. My `main()` has to take a number and a
+string.
+
+Not so mysterious now.
+
+Even though I will never use these two input arguments to main, I
+must have them or I get the linker error because SDL cannot find
+a definition of a `main()` that matches the `SDL_main_func` type.
