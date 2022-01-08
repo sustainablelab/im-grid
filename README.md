@@ -720,6 +720,15 @@ Set OpenGL attributes before creating an OpenGL window. See
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 ```
 
+The `SDL_GL_SetAttribute` function signature:
+
+```c
+int SDL_GL_SetAttribute(SDL_GLattr attr, int value);
+```
+
+See the list of [`SDL_GLattr`
+attributes](https://wiki.libsdl.org/SDL_GLattr).
+
 #### Create an SDL window
 
 See [`SDL_CreateWindow`](https://wiki.libsdl.org/SDL_CreateWindow)
